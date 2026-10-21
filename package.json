@@ -1,0 +1,18 @@
+{
+  "name": "opencode-hardware-notifier",
+  "version": "1.0.0",
+  "description": "Arduino buzzer and LED status feedback for OpenCode",
+  "type": "module",
+  "main": "plugin/buzzer.js",
+  "license": "MIT",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "arduino",
+    "buzzer",
+    "notifier"
+  ],
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {}
+}
