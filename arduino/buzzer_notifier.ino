@@ -157,6 +157,10 @@ void handleCommand(String cmd) {
     digitalWrite(BLUE_PIN, HIGH);
     playMelody(PROMPT_MELODY, sizeof(PROMPT_MELODY) / sizeof(PROMPT_MELODY[0]));
   }
+  else if (cmd == "OFF" || cmd == "SHUTDOWN") {
+    // Plugin unloaded / OpenCode closed: silently clear every indicator
+    stopMelody();
+  }
   else {
     // Unknown: single beep
     playMelody(UNKNOWN_MELODY, sizeof(UNKNOWN_MELODY) / sizeof(UNKNOWN_MELODY[0]));
@@ -170,8 +174,13 @@ void setLeds(int green, int yellow, int red, int blue) {
   digitalWrite(BLUE_PIN, blue);
 }
 
-void playMelody(const Note *melody, uint8_t length) {
+void stopMelody() {
+  melodyPlaying = false;
   noTone(BUZZER_PIN);
+}
+
+void playMelody(const Note *melody, uint8_t length) {
+  stopMelody();
   activeMelody = melody;
   melodyLength = length;
   melodyIndex = 0;

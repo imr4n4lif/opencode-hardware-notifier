@@ -238,8 +238,16 @@ export default {
 
     return async () => {
       controller.abort();
+
+      // Clear the hardware before releasing the port so the Arduino does not
+      // stay lit after OpenCode closes or the plugin unloads.
+      await sendState("OFF");
       await writeQueue.catch(() => {});
-      if (serial) await serial.close();
+
+      if (serial) {
+        await serial.close();
+        serial = null;
+      }
     };
   },
 };

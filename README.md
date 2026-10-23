@@ -15,6 +15,7 @@ Physical status feedback for [OpenCode](https://opencode.ai). An Arduino drives 
 | IDLE    | Whole task succeeded or was cancelled                | 3-note completion chime    | Yellow |
 | ERROR   | Whole task failed                                    | Falling low alarm          | Red    |
 | PROMPT  | Permission requested or a question needs an answer    | Alternating attention trill| Blue   |
+| OFF     | OpenCode closes or the plugin unloads                | Silent                     | All off|
 
 A state is only sent when it changes, so the buzzer never repeats itself. New
 states interrupt the current melody, and the melody player is non-blocking, so
@@ -38,6 +39,10 @@ a late idle event cannot hide it.
 
 `PROMPT` fires when OpenCode asks for permission or presents a question/form.
 Replying returns the notifier to `WORKING`.
+
+`OFF` is sent when the plugin unloads, for example when OpenCode closes or the
+background service stops. The Arduino stops any melody and turns every LED off
+without making a sound.
 
 ## Features
 
