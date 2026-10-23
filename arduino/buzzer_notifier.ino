@@ -7,7 +7,7 @@
 // Wiring:
 //   Pin 8  -> Buzzer +
 //   Pin 9  -> Green LED   (WORKING)
-//   Pin 10 -> Yellow LED  (IDLE)
+//   Pin 10 -> Yellow LED  (IDLE / task complete)
 //   Pin 11 -> Red LED     (ERROR)
 //   Pin 12 -> Blue LED    (PROMPT)
 //   GND    -> Buzzer - and all LED cathodes (via 220 ohm resistors)
@@ -19,8 +19,69 @@ const int BLUE_PIN = 12;   // PROMPT
 
 const int BUZZER_PIN = 8;
 
+// A melody is a list of notes. A frequency of 0 is a rest.
+struct Note {
+  uint16_t frequency;
+  uint16_t duration;
+  uint16_t gap;
+};
+
+// Connected: bright rising triad.
+const Note READY_MELODY[] = {
+  { 660, 80, 20 },
+  { 880, 80, 20 },
+  { 1320, 160, 0 },
+};
+
+// Thinking / working: short, subtle rising motif.
+const Note WORKING_MELODY[] = {
+  { 440, 55, 15 },
+  { 554, 55, 15 },
+  { 659, 90, 0 },
+};
+
+// Complete: pleasant "ta-da" chime.
+const Note IDLE_MELODY[] = {
+  { 784, 80, 20 },
+  { 1047, 80, 20 },
+  { 1319, 170, 0 },
+};
+
+// Error: falling alarm.
+const Note ERROR_MELODY[] = {
+  { 392, 110, 30 },
+  { 311, 110, 30 },
+  { 262, 110, 30 },
+  { 196, 260, 0 },
+};
+
+// Needs you: attention trill.
+const Note PROMPT_MELODY[] = {
+  { 1047, 70, 30 },
+  { 1319, 70, 30 },
+  { 1047, 70, 30 },
+  { 1568, 180, 0 },
+};
+
+// Boot: tiny hardware chirp while the plugin connects.
+const Note BOOT_MELODY[] = {
+  { 988, 70, 20 },
+  { 1319, 100, 0 },
+};
+
+// Unknown command: single acknowledgement beep.
+const Note UNKNOWN_MELODY[] = {
+  { 880, 180, 0 },
+};
+
 String inputString = "";
 String currentState = "";
+
+const Note *activeMelody = nullptr;
+uint8_t melodyLength = 0;
+uint8_t melodyIndex = 0;
+unsigned long nextNoteAt = 0;
+bool melodyPlaying = false;
 
 void setup() {
   pinMode(GREEN_PIN, OUTPUT);
@@ -34,15 +95,14 @@ void setup() {
 
   // Startup: all LEDs off
   setLeds(LOW, LOW, LOW, LOW);
+  playMelody(BOOT_MELODY, sizeof(BOOT_MELODY) / sizeof(BOOT_MELODY[0]));
 
-  // Startup chirp
-  tone(BUZZER_PIN, 1000, 200);
-  delay(250);
-  tone(BUZZER_PIN, 1500, 200);
   Serial.println("Arduino ready");
 }
 
 void loop() {
+  updateMelody();
+
   while (Serial.available()) {
     char inChar = (char)Serial.read();
     if (inChar == '\n' || inChar == '\r') {
@@ -74,39 +134,32 @@ void handleCommand(String cmd) {
   setLeds(LOW, LOW, LOW, LOW);
 
   if (cmd == "READY") {
-    // Plugin connected: double beep
-    beep(400, 100);
-    delay(100);
-    beep(400, 100);
+    // Plugin connected: rising triad, all LEDs stay off
+    playMelody(READY_MELODY, sizeof(READY_MELODY) / sizeof(READY_MELODY[0]));
   }
   else if (cmd == "WORKING") {
-    // OpenCode processing: long medium beep + GREEN LED solid
+    // Thinking, executing, tool calls or subagents: green LED
     digitalWrite(GREEN_PIN, HIGH);
-    tone(BUZZER_PIN, 800, 500);
+    playMelody(WORKING_MELODY, sizeof(WORKING_MELODY) / sizeof(WORKING_MELODY[0]));
   }
   else if (cmd == "IDLE") {
-    // Done or canceled: short high beep + YELLOW LED solid
+    // Whole task complete (or cancelled): yellow LED + completion chime
     digitalWrite(YELLOW_PIN, HIGH);
-    beep(1200, 150);
+    playMelody(IDLE_MELODY, sizeof(IDLE_MELODY) / sizeof(IDLE_MELODY[0]));
   }
   else if (cmd == "ERROR") {
-    // Error: 3 fast low beeps + RED LED solid
+    // Task failed: red LED + falling alarm
     digitalWrite(RED_PIN, HIGH);
-    for (int i = 0; i < 3; i++) {
-      beep(600, 150);
-      delay(100);
-    }
+    playMelody(ERROR_MELODY, sizeof(ERROR_MELODY) / sizeof(ERROR_MELODY[0]));
   }
   else if (cmd == "PROMPT") {
-    // Needs input: double ascending beep + BLUE LED solid
+    // Permission or question needs the user: blue LED + trill
     digitalWrite(BLUE_PIN, HIGH);
-    beep(1000, 150);
-    delay(100);
-    beep(1400, 150);
+    playMelody(PROMPT_MELODY, sizeof(PROMPT_MELODY) / sizeof(PROMPT_MELODY[0]));
   }
   else {
     // Unknown: single beep
-    beep(800, 300);
+    playMelody(UNKNOWN_MELODY, sizeof(UNKNOWN_MELODY) / sizeof(UNKNOWN_MELODY[0]));
   }
 }
 
@@ -117,8 +170,36 @@ void setLeds(int green, int yellow, int red, int blue) {
   digitalWrite(BLUE_PIN, blue);
 }
 
-void beep(int frequency, int duration) {
-  tone(BUZZER_PIN, frequency, duration);
-  delay(duration);
+void playMelody(const Note *melody, uint8_t length) {
   noTone(BUZZER_PIN);
+  activeMelody = melody;
+  melodyLength = length;
+  melodyIndex = 0;
+  melodyPlaying = length > 0;
+  nextNoteAt = millis();
+}
+
+// Non-blocking melody player so a new state can interrupt the current sound
+// and serial input is never ignored while a tone is playing.
+void updateMelody() {
+  if (!melodyPlaying) return;
+
+  unsigned long now = millis();
+  if ((long)(now - nextNoteAt) < 0) return;
+
+  if (melodyIndex >= melodyLength) {
+    melodyPlaying = false;
+    noTone(BUZZER_PIN);
+    return;
+  }
+
+  const Note &note = activeMelody[melodyIndex++];
+
+  if (note.frequency > 0) {
+    tone(BUZZER_PIN, note.frequency, note.duration);
+  } else {
+    noTone(BUZZER_PIN);
+  }
+
+  nextNoteAt = now + note.duration + note.gap;
 }

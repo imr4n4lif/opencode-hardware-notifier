@@ -14,5 +14,7 @@
   ],
   "dependencies": {},
   "devDependencies": {},
-  "scripts": {}
+  "scripts": {
+    "test": "node --test"
+  }
 }
