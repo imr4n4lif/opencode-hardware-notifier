@@ -26,52 +26,55 @@ struct Note {
   uint16_t gap;
 };
 
-// Connected: bright rising triad.
+// Connected: bright rising major triad (chiptune power-up)
 const Note READY_MELODY[] = {
-  { 660, 80, 20 },
-  { 880, 80, 20 },
-  { 1320, 160, 0 },
+  { 1047, 70, 15 },  // C6
+  { 1319, 70, 15 },  // E6
+  { 1568, 70, 15 },  // G6
+  { 2093, 180, 0 },  // C7
 };
 
-// Thinking / working: short, subtle rising motif.
+// Working: short upward arpeggio, subtle but clear
 const Note WORKING_MELODY[] = {
-  { 440, 55, 15 },
-  { 554, 55, 15 },
-  { 659, 90, 0 },
+  { 1175, 45, 10 },  // D6
+  { 1397, 45, 10 },  // F6
+  { 1568, 45, 10 },  // G6
+  { 1760, 90, 0 },   // A6
 };
 
-// Complete: pleasant "ta-da" chime.
+// Complete: cheerful "level complete" fanfare
 const Note IDLE_MELODY[] = {
-  { 784, 80, 20 },
-  { 1047, 80, 20 },
-  { 1319, 170, 0 },
+  { 1568, 80, 20 },  // G6
+  { 1976, 80, 20 },  // B6
+  { 2349, 80, 20 },  // D7
+  { 2637, 220, 0 },  // E7
 };
 
-// Error: falling alarm.
+// Error: descending minor triad with a sad tail
 const Note ERROR_MELODY[] = {
-  { 392, 110, 30 },
-  { 311, 110, 30 },
-  { 262, 110, 30 },
-  { 196, 260, 0 },
+  { 1245, 100, 25 }, // D#6
+  { 1109, 100, 25 }, // C#6
+  { 988,  100, 25 }, // B5
+  { 831,  260, 0 },  // G#5
 };
 
-// Needs you: attention trill.
+// Prompt: alternating trill (attention!)
 const Note PROMPT_MELODY[] = {
-  { 1047, 70, 30 },
-  { 1319, 70, 30 },
-  { 1047, 70, 30 },
-  { 1568, 180, 0 },
+  { 2093, 60, 20 },  // C7
+  { 2349, 60, 20 },  // D7
+  { 2093, 60, 20 },  // C7
+  { 2637, 160, 0 },  // E7
 };
 
-// Boot: tiny hardware chirp while the plugin connects.
+// Boot: tiny upward chirp
 const Note BOOT_MELODY[] = {
-  { 988, 70, 20 },
-  { 1319, 100, 0 },
+  { 1760, 50, 10 },  // A6
+  { 2637, 80, 0 },   // E7
 };
 
-// Unknown command: single acknowledgement beep.
+// Unknown: single soft ping
 const Note UNKNOWN_MELODY[] = {
-  { 880, 180, 0 },
+  { 1568, 150, 0 },  // G6
 };
 
 String inputString = "";
